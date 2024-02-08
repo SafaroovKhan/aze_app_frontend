@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Platform, ScrollView} from 'react-native';
-import React, { useLayoutEffect, useState } from 'react'
+import React, { useLayoutEffect, useState, useEffect } from 'react'
+import { Audio } from 'expo-av';
+
 export default function App() {
 
   const [text, setText] = useState('');
@@ -7,6 +9,9 @@ export default function App() {
   const [audioFilePath, setAudioFilePath] = useState('');
   const [openCard, setOpenCard] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('');
+  const [sound, setSound] = useState();
+
+
 
   const handleUploadMP3 = async () => {
     try {
@@ -24,22 +29,43 @@ export default function App() {
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log(data);
 
         setSuccessMessage(data.message);
-        setAudioFilePath(data.audio_file_path);
+        setAudioFilePath(data.audio_file_url);
+        console.log("Audio file URL:", data.audio_file_url); 
+
     } catch (error) {
         console.error('Error uploading MP3:', error);
     }
 };
 
+const handlePlayPause = async () => {
+  console.log('Loading Sound');
+  const { sound } = await Audio.Sound.createAsync({ audioFilePath });
+  console.log( sound )
+  setSound( sound );
+
+  console.log('Playing Sound');
+  await sound.playAsync();
+};
+
+useEffect(() => {
+  return sound
+    ? async () => {
+        console.log('Unloading Sound');
+        await sound.unloadAsync();
+      }
+    : undefined;
+}, [sound, audioFilePath]);
 
 const handleCard = (voiceType) => {
   setOpenCard(!openCard)
   setSelectedVoice(voiceType);
 }
+
 
   return (
     <SafeAreaView style={styles.androidSafeArea}>
@@ -52,7 +78,11 @@ const handleCard = (voiceType) => {
         <View style={styles.mp3Box}>
           <View style={styles.mp3BoxWrapper}>
             <ScrollView>
-              
+            {audioFilePath && (
+              <TouchableOpacity style={styles.btn} onPress={handlePlayPause}>
+                <Text style={styles.btnTxt}>Play</Text>
+              </TouchableOpacity>
+            )}
             </ScrollView>
           </View>
         </View>
